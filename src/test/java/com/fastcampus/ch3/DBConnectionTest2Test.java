@@ -10,6 +10,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.sql.DataSource;
 import javax.swing.tree.ExpandVetoException;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -24,12 +25,12 @@ public class DBConnectionTest2Test {
     DataSource ds;
 
     @Test
-    public void insertUserTest() throws  Exception {
+    public void insertUserTest() throws Exception {
         User user = new User("asdf2", "1234", "abc", "aaaa@aaa.com", new Date(), "fb", new Date());
         deleteAll();
         int rowCnt = insertUser(user);
 
-        assertTrue(rowCnt==1);
+        assertTrue(rowCnt == 1);
     }
 
     @Test
@@ -47,16 +48,16 @@ public class DBConnectionTest2Test {
         deleteAll();
         int rowCnt = deleteUser("asdf");
 
-        assertTrue(rowCnt==0);
+        assertTrue(rowCnt == 0);
 
         User user = new User("asdf2", "1234", "abc", "aaaa@aaa.com", new Date(), "fb", new Date());
         rowCnt = insertUser(user);
-        assertTrue(rowCnt==1);
+        assertTrue(rowCnt == 1);
 
         rowCnt = deleteUser(user.getId());
-        assertTrue(rowCnt==1);
+        assertTrue(rowCnt == 1);
 
-        assertTrue(selectUser(user.getId())==null);
+        assertTrue(selectUser(user.getId()) == null);
 
     }
 
@@ -83,10 +84,10 @@ public class DBConnectionTest2Test {
         String sql = "select * from user_info where id= ? ";
 
         PreparedStatement pstmt = conn.prepareStatement(sql); // SQL Injection공격, 성능향상
-        pstmt.setString(1,id);
+        pstmt.setString(1, id);
         ResultSet rs = pstmt.executeQuery(); //  select
 
-        if(rs.next()) {
+        if (rs.next()) {
             User user = new User();
             user.setId(rs.getString(1));
             user.setPwd(rs.getString(2));
@@ -107,6 +108,43 @@ public class DBConnectionTest2Test {
 
         PreparedStatement pstmt = conn.prepareStatement(sql); // SQL Injection공격, 성능향상
         pstmt.executeUpdate(); //  insert, delete, update
+    }
+
+    @Test
+    public void transactionTest() throws Exception {
+        Connection conn = null;
+        try {
+            deleteAll();
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);  // conn.setAutoCommit(true) 일 경우 여려 명령어 일 경우 제대로 처리 할수 없다
+
+            //        insert into user_info (id, pwd, name, email, birth, sns, reg_date)
+            //        values ('asdf22', '1234', 'smith', 'aaa@aaa.com', '2022-01-01', 'facebook', now());
+
+            String sql = "insert into user_info values (?, ?, ?, ?,?,?, now()) ";
+
+            PreparedStatement pstmt = conn.prepareStatement(sql); // SQL Injection공격, 성능향상
+            pstmt.setString(1, "asdf");
+            pstmt.setString(2, "1234");
+            pstmt.setString(3, "abc");
+            pstmt.setString(4, "aaa@aaa.com");
+            pstmt.setDate(5, new java.sql.Date(new Date().getTime()));
+            pstmt.setString(6, "fb");
+
+            int rowCnt = pstmt.executeUpdate(); //  insert, delete, update
+
+            pstmt.setString(1, "asdf");
+            rowCnt = pstmt.executeUpdate(); //  insert, delete, update
+
+            conn.commit();
+
+        } catch (Exception e) {
+            conn.rollback();
+            e.printStackTrace();
+        } finally {
+
+        }
+
     }
 
     // 사용자 정보를 user_info테이블에 저장하는 메서드
@@ -139,6 +177,6 @@ public class DBConnectionTest2Test {
         Connection conn = ds.getConnection(); // 데이터베이스의 연결을 얻는다.
 
         System.out.println("conn = " + conn);
-        assertTrue(conn!=null); // 괄호 안의 조건식이 true면, 테스트 성공, 아니면 실패
+        assertTrue(conn != null); // 괄호 안의 조건식이 true면, 테스트 성공, 아니면 실패
     }
 }
