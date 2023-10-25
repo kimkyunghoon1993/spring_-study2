@@ -1,6 +1,5 @@
 package com.fastcampus.ch3;
 
-
 public interface UserDao {
     int deleteUser(String id);
 
